@@ -86,6 +86,7 @@ setup(
     entry_points="""
     [gui_scripts]
     gtimelog = gtimelog.main:main
+    ctimelog = gtimelog.ctimelog:main
     """,
-    install_requires=['PyGObject'],
+    install_requires=['PyGObject', 'prompt_toolkit'],
 )
