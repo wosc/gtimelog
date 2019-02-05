@@ -201,7 +201,7 @@ def add_entry(event):  # Does not seem to support methods, sigh.
     if not entry:
         return
     InputToolbar.content.input_buffer.text = ''
-    TIMELOG.append(entry, now=None)
+    TIMELOG.append(entry, now=None, round=SETTINGS.precision)
     InputToolbar.content.entry_added()
     LogWindow.content.render()
 
@@ -209,6 +209,7 @@ def add_entry(event):  # Does not seem to support methods, sigh.
 def main():
     global APP, TIMELOG, SETTINGS
     SETTINGS = Settings()
+    SETTINGS.load()
     TIMELOG = TimeLog(SETTINGS.get_timelog_file(), datetime.time(0, 0))
     APP = Application(layout=layout, full_screen=True, key_bindings=global_keys)
     LogWindow.content.render()

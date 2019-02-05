@@ -1002,10 +1002,12 @@ class TimeLog(TimeCollection):
         f.close()
         self.last_mtime = get_mtime(self.filename)
 
-    def append(self, entry, now=None):
+    def append(self, entry, now=None, round=None):
         """Append a new entry to the time log."""
         if not now:
             now = datetime.datetime.now().replace(second=0, microsecond=0)
+        if round:
+            now = self.round_time(now, round)
         self.check_reload()
         need_space = False
         last = self.last_time()
@@ -1015,6 +1017,20 @@ class TimeLog(TimeCollection):
         self.window.items.append((now, entry))
         line = '%s: %s' % (now.strftime("%Y-%m-%d %H:%M"), entry)
         self.raw_append(line, need_space)
+
+    def round_time(self, time, target):
+        minute = self.round_towards(time.minute, target)
+        if minute == 60:
+            minute = 0
+            time += datetime.timedelta(hours=1)
+        return time.replace(minute=minute)
+
+    def round_towards(self, number, target):
+        factor, remainder = divmod(number, target)
+        if remainder <= target / 2:
+            return target * factor
+        else:
+            return target * (factor + 1)
 
     def valid_time(self, time):
         """Is this a valid time for a correction?
