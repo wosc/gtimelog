@@ -123,6 +123,16 @@ def quit(event):
     event.app.exit()
 
 
+@InputControl.keys.add('enter')
+def add_entry(event):  # Does not seem to support methods, sigh.
+    entry = InputToolbar.content.input_buffer.text
+    if not entry:
+        return
+    InputToolbar.content.input_buffer.text = ''
+    TIMELOG.append(entry, now=None)
+    LogWindow.content.render()
+
+
 TIMELOG = None
 
 
