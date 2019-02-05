@@ -1,10 +1,12 @@
 import datetime
+import io
 
+from prompt_toolkit import HTML
 from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout.containers import HSplit, Window
-from prompt_toolkit.layout.controls import BufferControl
+from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.widgets import FormattedTextToolbar
 
@@ -17,13 +19,10 @@ def format_duration(duration):
     return '%s h %02d min' % (h, m)
 
 
-class LogControl(BufferControl):
-
-    def __init__(self):
-        self.log_buffer = Buffer()
-        super(LogControl, self).__init__(buffer=self.log_buffer)
+class LogControl(FormattedTextControl):
 
     def render(self):
+        self.output = io.StringIO()
         window = TIMELOG.window_for_day(today)
         total = datetime.timedelta(0)
         prev = None
@@ -31,29 +30,39 @@ class LogControl(BufferControl):
             first_of_day = prev is None or different_days(
                 prev, item.start, TIMELOG.virtual_midnight)
             if first_of_day and prev is not None:
-                self.w("\n")
-            self.write_item(item)
+                self.w('\n')
+            tag = 'slacking' if first_of_day else None
+            self.write_item(item, tag)
             total += item.duration
             prev = item.start
+        self.text = HTML(self.output.getvalue())
 
-    def write_item(self, item):
+    def write_item(self, item, tag=None):
         self.w(format_duration(item.duration), 'duration')
         self.w(' ')
         period = '({0:%H:%M}-{1:%H:%M})'.format(item.start, item.stop)
         self.w(period, 'time')
         self.w(' ')
-        tag = ('slacking' if '**' in item.entry else None)
+        tag = ('slacking' if '**' in item.entry else tag)
         self.w(item.entry + '\n', tag)
 
-    def w(self, text, tag=None):
-        self.log_buffer.text += text
+    TAGS = {
+        'duration': 'red',
+        'time': 'green',
+        'slacking': 'blue',
+    }
 
+    def w(self, text, tag=None):
+        if tag:
+            text = '<ansi{color}>{text}</ansi{color}>'.format(
+                text=text, color=self.TAGS[tag])
+        self.output.write(text)
 
 
 class Statusbar(FormattedTextToolbar):
 
     def __init__(self):
-        super(Statusbar, self).__init__('', style='reverse')
+        super(Statusbar, self).__init__('')
 
     def render(self):
         window = TIMELOG.window_for_day(today)
@@ -65,8 +74,11 @@ class Statusbar(FormattedTextToolbar):
         weekly_window = TIMELOG.window_for_week(today)
         week_total_work, week_total_slacking = weekly_window.totals()
 
-        self.content.text = (
-            'Work done: %s (%s this week), Time left: %s (till %s)' % (
+        self.content.text = HTML(
+            'Work done: <ansired>%s</ansired> '
+            '(<ansigreen>%s</ansigreen> this week) '
+            'Time left: <ansired>%s</ansired> '
+            '(till <ansigreen>%s</ansigreen>)' % (
                 format_duration(total_work),
                 format_duration(week_total_work),
                 format_duration(time_left),
