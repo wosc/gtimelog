@@ -68,10 +68,11 @@ class Statusbar(FormattedTextToolbar):
         super(Statusbar, self).__init__('')
 
     def render(self):
+        self.now = datetime.datetime.now()
         window = TIMELOG.window_for_day(today)
         total_work, total_slacking = window.totals()
         time_left = self.time_left_at_work(total_work)
-        time_to_leave = datetime.datetime.now() + time_left
+        time_to_leave = self.now + time_left
         if time_left < datetime.timedelta(0):
             time_left = datetime.timedelta(0)
         weekly_window = TIMELOG.window_for_week(today)
@@ -88,8 +89,15 @@ class Statusbar(FormattedTextToolbar):
                 time_to_leave.strftime('%H:%M')))
 
     def time_left_at_work(self, total_work):
-        total_time = total_work  # + self.get_current_task_work_time()
+        total_time = total_work + self.get_current_task_time()
         return datetime.timedelta(hours=SETTINGS.hours) - total_time
+
+    def get_current_task_time(self):
+        last_time = TIMELOG.window.last_time()
+        if last_time is None:
+            return datetime.timedelta(0)
+        else:
+            return self.now - last_time
 
 
 class InputControl(BufferControl):
