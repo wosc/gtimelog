@@ -4,6 +4,7 @@ import io
 from prompt_toolkit import HTML
 from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
@@ -94,10 +95,32 @@ class InputControl(BufferControl):
     keys = KeyBindings()
 
     def __init__(self):
-        self.input_buffer = Buffer(multiline=False)
+        self.completion_choices_as_set = set()
+        self.completion_choices = []
+        self.input_buffer = Buffer(multiline=False, completer=WordCompleter(
+            self.completion_choices,
+            ignore_case=True, sentence=True, match_middle=True))
         super(InputControl, self).__init__(
             buffer=self.input_buffer,
             key_bindings=self.keys)
+
+    COMPLETION_LIMIT = 1000
+
+    def timelog_changed(self):
+        history = [item[1] for item in TIMELOG.items]
+        entries = []
+        for entry in reversed(history):
+            if entry not in self.completion_choices_as_set:
+                entries.append(entry)
+                self.completion_choices_as_set.add(entry)
+        for entry in reversed(entries[:self.COMPLETION_LIMIT]):
+            self.completion_choices.append(entry)
+
+    def entry_added(self):
+        entry = TIMELOG.last_entry().entry
+        if entry not in self.completion_choices_as_set:
+            self.completion_choices.append(entry)
+            self.completion_choices_as_set.add(entry)
 
 
 LogWindow = Window(LogControl())
@@ -130,6 +153,7 @@ def add_entry(event):  # Does not seem to support methods, sigh.
         return
     InputToolbar.content.input_buffer.text = ''
     TIMELOG.append(entry, now=None)
+    InputToolbar.content.entry_added()
     LogWindow.content.render()
 
 
@@ -143,5 +167,6 @@ def main():
     app = Application(layout=layout, full_screen=True, key_bindings=global_keys)
     LogWindow.content.render()
     StatusToolbar.render()
+    InputToolbar.content.timelog_changed()
     layout.focus(InputToolbar)
     app.run()
