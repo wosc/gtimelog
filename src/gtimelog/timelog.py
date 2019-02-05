@@ -1032,6 +1032,22 @@ class TimeLog(TimeCollection):
         else:
             return target * (factor + 1)
 
+    def pop(self):
+        last = self.window.items[-1]
+        f = open(self.filename, 'r')
+        lines = f.readlines()
+        f.close()
+        f = open(self.filename, 'w')
+        f.writelines(lines[:-1])
+        f.close()
+        self.reread()
+        return last
+
+    def change_last_entry(self, minutes):
+        last = self.pop()
+        self.append(last[1], last[0] + datetime.timedelta(minutes=minutes))
+        return last
+
     def valid_time(self, time):
         """Is this a valid time for a correction?
 

@@ -229,6 +229,26 @@ def editor(event):
     spawn(SETTINGS.editor, '"%s"' % TIMELOG.filename)
 
 
+@global_keys.add('c-p')
+def lengthen_last_entry(event):
+    TIMELOG.change_last_entry(SETTINGS.precision)
+    reread(event)
+
+
+@global_keys.add('c-n')
+def shorten_last_entry(event):
+    TIMELOG.change_last_entry(-SETTINGS.precision)
+    reread(event)
+
+
+@global_keys.add('c-l')
+def delete_last_entry(event):
+    last = TIMELOG.pop()
+    reread(event)
+    InputToolbar.content.input_buffer.text = last[1]
+    InputToolbar.content.input_buffer.cursor_position = len(last[1])
+
+
 def main():
     global APP, TIMELOG, SETTINGS
     SETTINGS = Settings()
