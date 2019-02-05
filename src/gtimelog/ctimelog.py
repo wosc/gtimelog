@@ -1,5 +1,6 @@
 import datetime
 import io
+import threading
 
 from prompt_toolkit import HTML
 from prompt_toolkit.application import Application
@@ -9,6 +10,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.layout.processors import BeforeInput
 from prompt_toolkit.widgets import FormattedTextToolbar
 
 from gtimelog.settings import Settings
@@ -93,6 +95,7 @@ class Statusbar(FormattedTextToolbar):
 class InputControl(BufferControl):
 
     keys = KeyBindings()
+    last_tick = None
 
     def __init__(self):
         self.completion_choices_as_set = set()
@@ -100,9 +103,13 @@ class InputControl(BufferControl):
         self.input_buffer = Buffer(multiline=False, completer=WordCompleter(
             self.completion_choices,
             ignore_case=True, sentence=True, match_middle=True))
+        self.prompt = BeforeInput('0 h 00 min>')
         super(InputControl, self).__init__(
             buffer=self.input_buffer,
+            input_processors=[self.prompt],
             key_bindings=self.keys)
+        self.timer = Timer(5, self.tick)
+        self.timer.start()
 
     COMPLETION_LIMIT = 1000
 
@@ -121,6 +128,39 @@ class InputControl(BufferControl):
         if entry not in self.completion_choices_as_set:
             self.completion_choices.append(entry)
             self.completion_choices_as_set.add(entry)
+        self.tick(True)
+
+    def tick(self, force_update=False):
+        now = datetime.datetime.now().replace(second=0, microsecond=0)
+        if not force_update and now == self.last_tick:
+            return
+        self.last_tick = now
+        last_time = TIMELOG.window.last_time()
+        if last_time is None:
+            self.prompt.text = now.strftime('%H:%M') + '>'
+        else:
+            self.prompt.text = format_duration(now - last_time) + '>'
+        APP.invalidate()
+
+
+class Timer(threading.Thread):
+
+    def __init__(self, interval, function, args=None, kwargs=None):
+        super(Timer, self).__init__()
+        self.interval = interval
+        self.function = function
+        self.args = args if args is not None else []
+        self.kwargs = kwargs if kwargs is not None else {}
+        self.finished = threading.Event()
+
+    def cancel(self):
+        self.finished.set()
+
+    def run(self):
+        while not self.finished.is_set():
+            self.finished.wait(self.interval)
+            if not self.finished.is_set():
+                self.function(*self.args, **self.kwargs)
 
 
 LogWindow = Window(LogControl())
@@ -143,6 +183,7 @@ global_keys = KeyBindings()
 
 @global_keys.add('c-q')
 def quit(event):
+    InputToolbar.content.timer.cancel()
     event.app.exit()
 
 
@@ -157,16 +198,14 @@ def add_entry(event):  # Does not seem to support methods, sigh.
     LogWindow.content.render()
 
 
-TIMELOG = None
-
-
 def main():
-    global TIMELOG, SETTINGS
+    global APP, TIMELOG, SETTINGS
     SETTINGS = Settings()
     TIMELOG = TimeLog(SETTINGS.get_timelog_file(), datetime.time(0, 0))
-    app = Application(layout=layout, full_screen=True, key_bindings=global_keys)
+    APP = Application(layout=layout, full_screen=True, key_bindings=global_keys)
     LogWindow.content.render()
     StatusToolbar.render()
     InputToolbar.content.timelog_changed()
+    InputToolbar.content.tick(True)
     layout.focus(InputToolbar)
-    app.run()
+    APP.run()
