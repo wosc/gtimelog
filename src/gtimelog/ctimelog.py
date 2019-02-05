@@ -1,5 +1,6 @@
 import datetime
 import io
+import os
 import threading
 
 from prompt_toolkit import HTML
@@ -20,6 +21,15 @@ from gtimelog.timelog import TimeLog, different_days, as_minutes
 def format_duration(duration):
     h, m = divmod(as_minutes(duration), 60)
     return '%s h %02d min' % (h, m)
+
+
+def spawn(command, arg=None):
+    if arg is not None:
+        if '%s' in command:
+            command = command % arg
+        else:
+            command += ' ' + arg
+    os.system(command + " &")
 
 
 class LogControl(FormattedTextControl):
@@ -204,6 +214,19 @@ def add_entry(event):  # Does not seem to support methods, sigh.
     TIMELOG.append(entry, now=None, round=SETTINGS.precision)
     InputToolbar.content.entry_added()
     LogWindow.content.render()
+
+
+@global_keys.add('c-r')
+def reread(event):
+    TIMELOG.reread()
+    InputToolbar.content.timelog_changed()
+    InputToolbar.content.tick(True)
+    LogWindow.content.render()
+
+
+@global_keys.add('c-o')
+def editor(event):
+    spawn(SETTINGS.editor, '"%s"' % TIMELOG.filename)
 
 
 def main():
