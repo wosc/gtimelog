@@ -214,6 +214,7 @@ def add_entry(event):  # Does not seem to support methods, sigh.
     TIMELOG.append(entry, now=None, round=SETTINGS.precision)
     InputToolbar.content.entry_added()
     LogWindow.content.render()
+    StatusToolbar.render()
 
 
 @global_keys.add('c-r')
@@ -222,6 +223,7 @@ def reread(event):
     InputToolbar.content.timelog_changed()
     InputToolbar.content.tick(True)
     LogWindow.content.render()
+    StatusToolbar.render()
 
 
 @global_keys.add('c-o')
