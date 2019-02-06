@@ -8,9 +8,10 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.layout.containers import HSplit, Window
+from prompt_toolkit.layout.containers import HSplit, Window, FloatContainer, Float
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
+from prompt_toolkit.layout.menus import CompletionsMenu
 from prompt_toolkit.layout.processors import BeforeInput
 from prompt_toolkit.widgets import FormattedTextToolbar
 
@@ -187,15 +188,15 @@ Input = InputControl()
 InputToolbar = Window(Input, dont_extend_height=True, height=1)
 
 today = datetime.date.today()
-root = HSplit([
+root = FloatContainer(HSplit([
     FormattedTextToolbar(
         ' ctimelog: %s (week %02d)' % (
             today.strftime('%A, %Y-%m-%d'), int(today.strftime('%W')) + 1),
         style='reverse'),
     Window(LogView),
     StatusToolbar,
-    InputToolbar,
-])
+    InputToolbar
+]), floats=[Float(CompletionsMenu(), xcursor=True, ycursor=True)])
 layout = Layout(root)
 global_keys = KeyBindings()
 
