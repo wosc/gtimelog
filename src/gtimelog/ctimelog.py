@@ -78,7 +78,6 @@ class Statusbar(FormattedTextToolbar):
         super(Statusbar, self).__init__('')
 
     def render(self):
-        self.now = datetime.datetime.now()
         window = TIMELOG.window_for_day(today)
         total_work, total_slacking = window.totals()
         time_left = self.time_left_at_work(total_work)
@@ -158,6 +157,8 @@ class InputControl(BufferControl):
             self.prompt.text = now.strftime('%H:%M') + '>'
         else:
             self.prompt.text = format_duration(now - last_time) + '>'
+        StatusToolbar.now = now
+        StatusToolbar.render()
         APP.invalidate()
 
 
@@ -213,8 +214,8 @@ def add_entry(event):  # Does not seem to support methods, sigh.
     InputToolbar.content.input_buffer.text = ''
     TIMELOG.append(entry, now=None, round=SETTINGS.precision)
     InputToolbar.content.entry_added()
+    InputToolbar.content.tick(True)
     LogWindow.content.render()
-    StatusToolbar.render()
 
 
 @global_keys.add('c-r')
@@ -223,7 +224,6 @@ def reread(event):
     InputToolbar.content.timelog_changed()
     InputToolbar.content.tick(True)
     LogWindow.content.render()
-    StatusToolbar.render()
 
 
 @global_keys.add('c-o')
@@ -231,13 +231,13 @@ def editor(event):
     spawn(SETTINGS.editor, '"%s"' % TIMELOG.filename)
 
 
-@global_keys.add('c-p')
+@global_keys.add('c-n')
 def lengthen_last_entry(event):
     TIMELOG.change_last_entry(SETTINGS.precision)
     reread(event)
 
 
-@global_keys.add('c-n')
+@global_keys.add('c-p')
 def shorten_last_entry(event):
     TIMELOG.change_last_entry(-SETTINGS.precision)
     reread(event)
@@ -258,7 +258,6 @@ def main():
     TIMELOG = TimeLog(SETTINGS.get_timelog_file(), datetime.time(0, 0))
     APP = Application(layout=layout, full_screen=True, key_bindings=global_keys)
     LogWindow.content.render()
-    StatusToolbar.render()
     InputToolbar.content.timelog_changed()
     InputToolbar.content.tick(True)
     layout.focus(InputToolbar)
