@@ -145,7 +145,6 @@ class InputControl(BufferControl):
         if entry not in self.completion_choices_as_set:
             self.completion_choices.append(entry)
             self.completion_choices_as_set.add(entry)
-        self.tick(True)
 
     def tick(self, force_update=False):
         now = datetime.datetime.now().replace(second=0, microsecond=0)
