@@ -182,9 +182,10 @@ class Timer(threading.Thread):
                 self.function(*self.args, **self.kwargs)
 
 
-LogWindow = Window(LogControl())
+LogView = LogControl()
 StatusToolbar = Statusbar()
-InputToolbar = Window(InputControl(), dont_extend_height=True, height=1)
+Input = InputControl()
+InputToolbar = Window(Input, dont_extend_height=True, height=1)
 
 today = datetime.date.today()
 root = HSplit([
@@ -192,7 +193,7 @@ root = HSplit([
         ' ctimelog: %s (week %02d)' % (
             today.strftime('%A, %Y-%m-%d'), int(today.strftime('%W')) + 1),
         style='reverse'),
-    LogWindow,
+    Window(LogView),
     StatusToolbar,
     InputToolbar,
 ])
@@ -202,28 +203,28 @@ global_keys = KeyBindings()
 
 @global_keys.add('c-q')
 def quit(event):
-    InputToolbar.content.timer.cancel()
+    Input.timer.cancel()
     event.app.exit()
 
 
 @InputControl.keys.add('enter')
 def add_entry(event):  # Does not seem to support methods, sigh.
-    entry = InputToolbar.content.input_buffer.text
+    entry = Input.input_buffer.text
     if not entry:
         return
-    InputToolbar.content.input_buffer.text = ''
+    Input.input_buffer.text = ''
     TIMELOG.append(entry, now=None, round=SETTINGS.precision)
-    InputToolbar.content.entry_added()
-    InputToolbar.content.tick(True)
-    LogWindow.content.render()
+    Input.entry_added()
+    Input.tick(True)
+    LogView.render()
 
 
 @global_keys.add('c-r')
 def reread(event):
     TIMELOG.reread()
-    InputToolbar.content.timelog_changed()
-    InputToolbar.content.tick(True)
-    LogWindow.content.render()
+    Input.timelog_changed()
+    Input.tick(True)
+    LogView.render()
 
 
 @global_keys.add('c-o')
@@ -247,8 +248,8 @@ def shorten_last_entry(event):
 def delete_last_entry(event):
     last = TIMELOG.pop()
     reread(event)
-    InputToolbar.content.input_buffer.text = last[1]
-    InputToolbar.content.input_buffer.cursor_position = len(last[1])
+    Input.input_buffer.text = last[1]
+    Input.input_buffer.cursor_position = len(last[1])
 
 
 def main():
@@ -257,8 +258,8 @@ def main():
     SETTINGS.load()
     TIMELOG = TimeLog(SETTINGS.get_timelog_file(), datetime.time(0, 0))
     APP = Application(layout=layout, full_screen=True, key_bindings=global_keys)
-    LogWindow.content.render()
-    InputToolbar.content.timelog_changed()
-    InputToolbar.content.tick(True)
+    LogView.render()
+    Input.timelog_changed()
+    Input.tick(True)
     layout.focus(InputToolbar)
     APP.run()
