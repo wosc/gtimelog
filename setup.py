@@ -87,6 +87,7 @@ setup(
     [gui_scripts]
     gtimelog = gtimelog.main:main
     ctimelog = gtimelog.ctimelog:main
+    gtl-report = gtimelog.report:weekly_report
     """,
     install_requires=['PyGObject', 'prompt_toolkit'],
 )
